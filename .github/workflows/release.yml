@@ -1,0 +1,34 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Build Angular
+        run: npm run build -- --configuration production
+
+      - name: Comprimir build
+        run: zip -r app.zip dist/
+
+      - name: Crear Release con archivo
+        uses: softprops/action-gh-release@v2
+        with:
+          files: app.zip
+          generate_release_notes: true
