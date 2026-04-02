@@ -7,7 +7,7 @@ import { products } from '../data/product.data';
 })
 export class ProductService {
 
-  finAll(): Product[]{
+  findAll(): Product[]{
     return products;
   }
 }
