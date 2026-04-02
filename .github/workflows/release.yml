@@ -5,6 +5,10 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag a publicar (ej: v1.0.0)'
+        required: true
 
 jobs:
   build:
@@ -13,6 +17,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
 
       - name: Instalar Node
         uses: actions/setup-node@v4
@@ -31,5 +37,6 @@ jobs:
       - name: Crear Release con archivo
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
           files: app.zip
           generate_release_notes: true
