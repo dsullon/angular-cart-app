@@ -5,8 +5,4 @@ export class CartItem{
         public quantity: number,
         public product: Product,
     ){}
-
-    total(): number{
-        return this.product.price * this.quantity;
-    }
 }

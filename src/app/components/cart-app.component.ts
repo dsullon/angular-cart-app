@@ -1,10 +1,13 @@
 import { Component, OnInit } from '@angular/core';
-import { ProductService } from '../services/product.service';
 import { CartItem } from '../models/cartItem';
 import { NavbarComponent } from "./navbar/navbar.component";
 import { Router, RouterOutlet } from '@angular/router';
 import { SharingDataService } from '../services/sharing-data.service';
 import Swal from 'sweetalert2'
+import { ItemsState } from '../store/cart-item/items.reducer';
+import { Store } from '@ngrx/store';
+import { add, remove, total } from '../store/cart-item/items.actions';
+import { selectorItems } from '../store/cart-item/items.selector';
 
 @Component({
   selector: 'cart-app',
@@ -14,42 +17,28 @@ import Swal from 'sweetalert2'
 export class CartAppComponent implements OnInit {
 
   items: CartItem[] = [];
-  total: number = 0;
 
   constructor(
+    private store: Store<{items: ItemsState}>,
     private router: Router,
-    private sharingDataService: SharingDataService){}
+    private sharingDataService: SharingDataService){
+      this.store.select(selectorItems).subscribe(state => {
+        this.items = state.items;
+        this.saveSession();
+      });
+    }
 
   ngOnInit(): void {
-    const data = JSON.parse(sessionStorage.getItem('cart') || '[]');
-    this.items = data.map(
-      (item: any) => new CartItem(item.quantity, item.product)
-    );
-    this.calculateTotal();
+    this.store.dispatch(total());
     this.onDeleteCart(); // Al inicio se suscribe al evento
     this.onAddCart(); // Al inicio se suscribe al evento
   }
 
   onAddCart(): void{
     this.sharingDataService.productEventEmitter.subscribe(product => {
-      const hasItem = this.items.find(item => item.product.id === product.id);
-      if(hasItem){
-        this.items = this.items.map(item => {
-          if(item.product.id === product.id){
-            return new CartItem(item.quantity + 1, item.product);
-          } else {
-            return item;
-          }
-        });
-      } else {
-        const instance = new CartItem(1, product);
-        this.items = [...this.items, instance];
-      }
-      this.calculateTotal();
-      this.saveSession();
-      this.router.navigate(['/cart'], 
-        {state: {items: this.items, total: this.total}}
-      );
+      this.store.dispatch(add({product}));
+      this.store.dispatch(total());
+      this.router.navigate(['/cart']);
 
       Swal.fire({
         title: "Compras",
@@ -59,42 +48,34 @@ export class CartAppComponent implements OnInit {
     })
   }
 
-  onDeleteCart(): void{
+  onDeleteCart(): void {
     this.sharingDataService.idProductEventEmitter.subscribe(id => {
       Swal.fire({
-        title: "¿Seguro de quitar el producto?",
-        text: "El proceso es irreversible",
+        title: "Esta seguro que desea eliminar?",
+        text: "Cuidado el item se eliminara del carro de compras!",
         icon: "warning",
         showCancelButton: true,
         confirmButtonColor: "#3085d6",
         cancelButtonColor: "#d33",
-        confirmButtonText: "Sí, eliminar"
+        confirmButtonText: "Si, eliminar!"
       }).then((result) => {
-        if (result.isConfirmed){
-          this.items = this.items.filter(item => item.product.id !== id);
-          if(this.items.length == 0)
-            sessionStorage.removeItem('cart');
-      
-          this.calculateTotal();
-          this.saveSession();
-          this.router.navigateByUrl("/", {skipLocationChange: true}).then(() => {
-            this.router.navigate(['/cart'], 
-              {state: {items: this.items, total: this.total}}
-            );
+        if (result.isConfirmed) {
+
+          this.store.dispatch(remove({ id }));
+          this.store.dispatch(total());
+
+          this.router.navigateByUrl('/', { skipLocationChange: true }).then(() => {
+            this.router.navigate(['/cart']);
           });
 
           Swal.fire({
-            title: "Producto eliminado!",
-            text: "El producto ha sido eliminado del carrito de compras.",
+            title: "Eliminado!",
+            text: "Se ha eliminado el item del carrito de compras.",
             icon: "success"
           });
         }
       });
-    });
-  }
-
-  calculateTotal(): void{
-    this.total = this.items.reduce((total, item) => total + item.total(), 0);
+    })
   }
   
   saveSession(): void{

@@ -1,8 +1,10 @@
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Product } from '../../models/product';
 import { ProductCardComponent } from '../product-card/product-card.component';
 import { SharingDataService } from '../../services/sharing-data.service';
-import { ProductService } from '../../services/product.service';
+import { Store } from '@ngrx/store';
+import { productsSelector } from '../../store/product/product.selector';
+import { load } from '../../store/product/product.actions';
 
 @Component({
   selector: 'catalog',
@@ -13,12 +15,12 @@ export class CatalogComponent implements OnInit {
   products!: Product[];
 
   constructor(
-    private productService: ProductService,
+    private store: Store<{products: Product[]}>,
     private sharingDataService: SharingDataService){
-
+      this.store.select(productsSelector).subscribe(state => this.products = state.products);
   }
   ngOnInit(): void {
-    this.products = this.productService.findAll();
+    this.store.dispatch(load());
   }
 
   onAddCart(product: Product){
